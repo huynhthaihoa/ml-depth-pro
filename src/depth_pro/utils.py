@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
+import cv2
 import pillow_heif
 from PIL import ExifTags, Image, TiffTags
 from pillow_heif import register_heif_opener
@@ -93,7 +94,7 @@ def load_rgb(
 
     if remove_alpha:
         img = img[:, :, :3]
-
+        
     LOGGER.debug(f"\tHxW: {img.shape[0]}x{img.shape[1]}")
 
     # Extract the focal length from exif data.
@@ -110,3 +111,52 @@ def load_rgb(
         f_px = None
 
     return img, icc_profile, f_px
+
+def load_opencvimage(image, reverse_channel: bool = True, remove_alpha: bool = True):
+    """Load an OpenCV/Numpy-format image.
+
+    Args:
+    ----
+        image: OpenCV/Numpy-format image
+        reverse_channel: Rotate the image channel order from BGR to RGB
+        remove_alpha: Remove the alpha channel, default is True.
+
+    Returns:
+    -------
+        img: The image loaded as a numpy array.
+        icc_profile: The color profile of the image.
+        f_px: The optional focal length in pixels, extracting from the exif data.
+
+    """
+
+    # Convert to RGB if single channel.
+    if image.ndim < 3 or image.shape[2] == 1:
+        image = np.dstack((image, image, image))
+    else:
+        #reverse from BGR to RGB
+        if remove_alpha:
+            image = image[:, :, :3]
+            
+        if reverse_channel:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            
+    image_pil = Image.fromarray(image)
+    img_exif = extract_exif(image_pil)
+    icc_profile = image_pil.info.get("icc_profile", None)
+        
+    LOGGER.debug(f"\tHxW: {image.shape[0]}x{image.shape[1]}")
+
+    # Extract the focal length from exif data.
+    f_35mm = img_exif.get(
+        "FocalLengthIn35mmFilm",
+        img_exif.get(
+            "FocalLenIn35mmFilm", img_exif.get("FocalLengthIn35mmFormat", None)
+        ),
+    )
+    if f_35mm is not None and f_35mm > 0:
+        LOGGER.debug(f"\tfocal length @ 35mm film: {f_35mm}mm")
+        f_px = fpx_from_f35(image.shape[1], image.shape[0], f_35mm)
+    else:
+        f_px = None
+
+    return image, icc_profile, f_px    

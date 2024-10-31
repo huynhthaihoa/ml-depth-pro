@@ -2,4 +2,4 @@
 """Depth Pro package."""
 
 from .depth_pro import create_model_and_transforms  # noqa
-from .utils import load_rgb  # noqa
+from .utils import load_rgb, load_opencvimage  # noqa
