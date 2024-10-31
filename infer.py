@@ -53,7 +53,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Load model and preprocessing transform
-    model, transform = depth_pro.create_model_and_transforms()
+    model, transform = depth_pro.create_model_and_transforms(device="cuda:0")
     model.eval()
 
     # Read input
@@ -62,9 +62,7 @@ if __name__ == '__main__':
     if isinstance(input, str) and (input.endswith('png') or input.endswith('jpg') or input.endswith('jpeg') or input.endswith('png')): # input is image
         # Load and preprocess an image.
         image, _, f_px = depth_pro.load_rgb(input)
-        print("before:", image.shape)
         image = transform(image)
-        print("after:", image.shape)
 
         # Run inference.
         prediction = model.infer(image, f_px=f_px)
@@ -91,7 +89,8 @@ if __name__ == '__main__':
             
             # Run inference.
             prediction = model.infer(image, f_px=f_px)
-            depth = prediction["depth"]  # Depth in [m].
+            depth = prediction["depth"].detach().cpu().numpy()  # Depth in [m].
+            print(depth.min(), depth.max())
             focallength_px = prediction["focallength_px"]  # Focal length in pixels.
             
             depth_vis = depth_value_to_depth_image(depth)

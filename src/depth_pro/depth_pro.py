@@ -71,7 +71,7 @@ def create_backbone_model(
 
 def create_model_and_transforms(
     config: DepthProConfig = DEFAULT_MONODEPTH_CONFIG_DICT,
-    device: torch.device = torch.device("cpu"),
+    device: str | torch.device = torch.device("cpu"),
     precision: torch.dtype = torch.float32,
 ) -> Tuple[DepthPro, Compose]:
     """Create a DepthPro model and load weights from `config.checkpoint_uri`.
@@ -87,6 +87,10 @@ def create_model_and_transforms(
         The Torch DepthPro model and associated Transform.
 
     """
+    
+    if type(device) is str:
+        device = torch.device(device)
+    
     patch_encoder, patch_encoder_config = create_backbone_model(
         preset=config.patch_encoder_preset
     )
